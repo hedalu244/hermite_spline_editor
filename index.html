@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermite spline editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+
+<body>
+    <div id="panel">
+        <button id="save_button" onclick="saveJsonFile()">保存</button>
+        <button id="load_button" onclick="loadJsonFile()">開く</button><br>
+        動画ファイル：<input type="file" id="video_file" accept="video/*" onchange="openVideo()"><br>
+        <details>
+            <summary>設定</summary>
+            <input type="checkbox" id="pause_restore">一時停止時に再生位置を戻す。<br>
+            <input type="checkbox" id="x_snap">横移動をグリッドにスナップ　　
+            グリッド密度<input type="number" value="8" min="1" max="60" id="x_snap_density" style="width:2em">
+        </details>
+
+        <details>
+            <summary>操作説明</summary>
+            <table>
+                <tr><td>Space</td><td>再生</td></tr>
+                <tr><td>W A S D</td><td>アンカーの移動</td></tr>
+                <tr><td>Q E</td><td>アンカーの傾き（速度）変更</td></tr>
+                <tr><td>O P</td><td>アンカーの選択</td></tr>
+                <tr><td>K</td><td>アンカーの追加</td></tr>
+                <tr><td>L</td><td>アンカーの削除</td></tr>
+                <tr><td>←→</td><td>表示の移動</td></tr>
+                <tr><td>↑↓</td><td>表示の拡大縮小</td></tr>
+            </table>
+        </details>
+        
+        <button id="play_button" onclick="togglePlay()">▶</button>
+        <input type="range" id="seekbar" min="0" max="60" value="0" step="0.01" style="width:50em">
+        <span id="seekbar_label">00:00</span> <br>
+        アンカー<span id="index_label"></span>
+        <button onclick="editing--; setDirectInput()">＜</button><button onclick="editing++; setDirectInput()">＞</button>　
+        時間<input type="number" id="direct_input_x" step="0.01" onchange="getDirectInput()" style="width:6em">秒　
+        位置<input type="number" id="direct_input_y" step="0.01" onchange="getDirectInput()"style="width:6em">%　
+        速度<input type="number" id="direct_input_v" step="0.01" onchange="getDirectInput()" style="width:6em">%毎秒　
+        <button onclick="addAnchor()">右に追加</button>
+        <button onclick="deleteAnchor()">削除</button>
+    </div>
+    <style>
+        #panel {
+            background-color: #22222255;
+            display: block;
+            position: absolute;
+        }
+        summary {
+            font-weight: bold;
+        }
+    </style>
+    <script src="main.js"></script>
+</body>
+
+</html>
