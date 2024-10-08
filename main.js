@@ -281,19 +281,19 @@ function draw() {
         }
     }
     if (keyIsDown(87)) {  // W
-        ys[editing] -= 0.01;
+        ys[editing] += 0.5;
         setDirectInput();
     }
     if (keyIsDown(83)) { // S
-        ys[editing] += 0.01;
+        ys[editing] -= 0.5;
         setDirectInput();
     }
     if (keyIsDown(81)) { // Q
-        vs[editing] -= 0.1;
+        vs[editing] -= 0.5;
         setDirectInput();
     }
     if (keyIsDown(69)) { // E
-        vs[editing] += 0.1;
+        vs[editing] += 0.5;
         setDirectInput();
     }
     if (keyIsDown(37)) { offsetX -= 5; }
@@ -380,8 +380,7 @@ function valifyInput() {
     if (editing < 0) editing = 0;
     if (N <= editing) editing = N - 1;
 
-    xs[editing] = constrain(xs[editing], xs[editing - 1], xs[editing + 1]);
-
+    xs[editing] = constrain(xs[editing], xs[editing - 1] || -Infinity, xs[editing + 1] || Infinity);
     ys[editing] = constrain(ys[editing], 0, 100);
 
     if ($("x_snap").checked) {
@@ -466,7 +465,7 @@ function keyPressed() {
     }
 
 
-    if (!$("x_snap").checked) {
+    if ($("x_snap").checked) {
         if (key == "a") {  // A
             xs[editing] -= 1 / $("x_snap_density").value;
             setDirectInput();
@@ -550,7 +549,7 @@ function mousePressed() {
     }
 
     if (areaX <= mouseX && mouseX < areaX + areaW && areaY < mouseY && mouseY < areaY + areaH)
-        dragged = true;
+        dragging = true;
 }
 
 function mouseDragged() {
@@ -558,7 +557,6 @@ function mouseDragged() {
         [xs[holdingIndex], ys[holdingIndex]] = invTrans(mouseX, mouseY);
     }
     else if (holdingType == 1) {
-        console.log("editingAnchor");
         const [_mouseX, _mouseY] = invTrans(mouseX, mouseY);
         const dx = _mouseX - xs[holdingIndex];
         const dy = _mouseY - ys[holdingIndex];
@@ -567,11 +565,9 @@ function mouseDragged() {
             vs[holdingIndex] = v;
         }
     }
-    else {
+    else if(dragging) {
         const dx = mouseX - pmouseX;
         offsetX += dx;
-
-        console.log(dx);
     }
     valifyInput();
 }
@@ -596,7 +592,6 @@ function doubleClicked() {
     }
     //曲線をクリックしたら追加
     const sprineHitResult = sprineHit();
-    console.log(sprineHitResult);
     if (sprineHitResult !== undefined) {
         const [_x, _y] = sprineHitResult;
         const [x, y] = invTrans(_x, _y);
@@ -640,6 +635,7 @@ function loadJsonFile() {
     fileInput.accept = ".json";
 
     fileInput.onchange = () => {
+        console.log("file changed");
         const file = fileInput.files[0];  // ユーザーが選択したファイル
         const reader = new FileReader();  // FileReaderを使ってファイルを読み込む
         reader.onload = (e) => {
