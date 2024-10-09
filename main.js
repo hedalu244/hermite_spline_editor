@@ -87,6 +87,7 @@ let areaH = 300;
 
 function setup() {
     setDirectInput();
+    loadStorage();
     windowResized();
 }
 
@@ -139,7 +140,7 @@ function drawBackground() {
 
     // xサブグリッド
     stroke(0, 0, 0, 40);
-    const xSubStep = 1 / $("x_snap_density").value;
+    const xSubStep = 1 / xGlidDensity();
     if (5 < xSubStep * scaleX) {
         for (let x = 0; ; x += xSubStep) {
             const _x = trans(x, 0)[0];
@@ -160,7 +161,7 @@ function drawBackground() {
 
     // グリッド横線
     stroke(0, 0, 0, 40);
-    const yStep = 10;
+    const yStep = 100 / yGlidDensity();
     for (let y = ceil(-offsetY / scaleY / yStep) * yStep; ; y += yStep) {
         const _y = trans(0, y)[1];
         if (_y < areaY || areaY + areaH < _y) break;
@@ -245,6 +246,8 @@ function drawVideo() {
 function draw() {
     background(255);
 
+    if (frameCount % 600 == 0) saveStorage();
+
     if (videoElement)
         drawVideo();
 
@@ -280,13 +283,15 @@ function draw() {
             setDirectInput();
         }
     }
-    if (keyIsDown(87)) {  // W
-        ys[editing] += 0.5;
-        setDirectInput();
-    }
-    if (keyIsDown(83)) { // S
-        ys[editing] -= 0.5;
-        setDirectInput();
+    if (!$("y_snap").checked) {
+        if (keyIsDown(87)) {  // W
+            ys[editing] += 0.5;
+            setDirectInput();
+        }
+        if (keyIsDown(83)) { // S
+            ys[editing] -= 0.5;
+            setDirectInput();
+        }
     }
     if (keyIsDown(81)) { // Q
         vs[editing] -= 0.5;
@@ -384,7 +389,11 @@ function valifyInput() {
     ys[editing] = constrain(ys[editing], 0, 100);
 
     if ($("x_snap").checked) {
-        xs[editing] = round(xs[editing] * $("x_snap_density").value) / $("x_snap_density").value;
+        xs[editing] = round(xs[editing] * xGlidDensity()) / xGlidDensity();
+    }
+
+    if ($("y_snap").checked) {
+        ys[editing] = round(ys[editing] * yGlidDensity() / 100) / yGlidDensity() * 100;
     }
 
     xs[0] = 0;
@@ -395,35 +404,49 @@ function valifyInput() {
     vs[editing] = round(vs[editing] * 100) / 100;
 }
 
+
 function addAnchor() {
     const x = (editing + 1 < N) ? (xs[editing] + xs[editing + 1]) / 2 : xs[editing] + 1;
+    addAnchorAt(x);
+}
+
+function addAnchorAt(x) {
+    stock();
+
+    const i = bisect(x, xs) + 1;
     const y = spline(x);
     const v = spline_derivative(x);
 
-    xs.splice(editing + 1, 0, x);
-    ys.splice(editing + 1, 0, y);
-    vs.splice(editing + 1, 0, v);
+    xs.splice(i, 0, x);
+    ys.splice(i, 0, y);
+    vs.splice(i, 0, v);
 
     N += 1;
-    editing += 1;
+    editing = i;
 
     setDirectInput();
 }
 
-function deleteAnchor() {
-    if (editing == 0) {
+function deleteAnchor(i) {
+    stock();
+
+    if (i == 0) {
         alert("最初のアンカーは削除できません");
         return;
     }
 
-    xs.splice(editing, 1);
-    ys.splice(editing, 1);
-    vs.splice(editing, 1);
+    xs.splice(i, 1);
+    ys.splice(i, 1);
+    vs.splice(i, 1);
 
     N -= 1;
-    editing -= 1;
+    editing = i - 1;
 
     setDirectInput();
+}
+
+function deleteEditing() {
+    deleteAnchor(editing);
 }
 
 function setDirectInput() {
@@ -445,35 +468,67 @@ function getDirectInput() {
     setDirectInput();
 }
 
-function keyPressed() {
-    if (key == " ")
+function xGlidDensity() {
+    const value = $("x_glid_density").value;
+    if (value == 0) return 1;
+    return value;
+}
+
+function yGlidDensity() {
+    const value = $("y_glid_density").value;
+    if (value == 0) return 1;
+    return value;
+}
+
+window.onkeydown = function (e) {
+    console.log(e.key);
+    if (e.key == " ")
         togglePlay();
 
-    if (key == "o") {
+    if (e.key == "o") {
         editing--;
         setDirectInput();
     }
-    if (key == "p") {
+    if (e.key == "p") {
         editing++;
         setDirectInput();
     }
-    if (key == "k") {
+    if (e.key == "Enter") {
         addAnchor();
+        stock();
     }
-    if (key == "l") {
-        deleteAnchor();
+    if (e.key == "Delete" || e.key == "Backspace") {
+        deleteAnchor(editing);
+        stock();
     }
-
-
-    if ($("x_snap").checked) {
-        if (key == "a") {  // A
-            xs[editing] -= 1 / $("x_snap_density").value;
-            setDirectInput();
-        }
-        if (key == "d") { // D
-            xs[editing] += 1 / $("x_snap_density").value;
-            setDirectInput();
-        }
+    if (e.key == "a") {  // A
+        stock();
+        if ($("x_snap").checked) xs[editing] -= 1 / xGlidDensity();
+        setDirectInput();
+    }
+    if (e.key == "d") { // D
+        stock();
+        if ($("x_snap").checked) xs[editing] += 1 / xGlidDensity();
+        setDirectInput();
+    }
+    if (e.key == "w") {  // w
+        stock();
+        if ($("y_snap").checked) ys[editing] += 100 / yGlidDensity();
+        setDirectInput();
+    }
+    if (e.key == "s") { // s
+        stock();
+        if ($("y_snap").checked) ys[editing] -= 100 / yGlidDensity();
+        setDirectInput();
+    }
+    if (e.key == "z" && e.getModifierState("Control")) {
+        undo();
+    }
+    if (e.key == "Z" && e.getModifierState("Control")) {
+        redo();
+    }
+    if (e.key == "y" && e.getModifierState("Control")) {
+        redo();
     }
 
     if (key == "ArrowUp") {
@@ -535,12 +590,14 @@ function mousePressed() {
     // 左クリックされたら、近くの頂点を移動対象に
     for (i = 0; i < N; i++) {
         if (anchorHit(i)) {
+            stock();
             holdingIndex = i;
             editing = i;
             holdingType = 0;
             return;
         }
         if (handleHit(i)) {
+            stock();
             holdingIndex = i;
             editing = i;
             holdingType = 1;
@@ -565,13 +622,12 @@ function mouseDragged() {
             vs[holdingIndex] = v;
         }
     }
-    else if(dragging) {
+    else if (dragging) {
         const dx = mouseX - pmouseX;
         offsetX += dx;
     }
     valifyInput();
 }
-
 
 function mouseReleased() {
     holdingIndex = -1;
@@ -582,26 +638,15 @@ function mouseReleased() {
 function doubleClicked() {
     //　近くの頂点を削除
     for (i = 0; i < N; i++) {
-        if (anchorHit(i)) {
-            xs.splice(i, 1);
-            ys.splice(i, 1);
-            vs.splice(i, 1);
-            N -= 1;
-            return;
-        }
+        if (anchorHit(i))
+            deleteAnchor(i);
     }
     //曲線をクリックしたら追加
     const sprineHitResult = sprineHit();
     if (sprineHitResult !== undefined) {
         const [_x, _y] = sprineHitResult;
         const [x, y] = invTrans(_x, _y);
-        const v = spline_derivative(x);
-        const i = bisect(x, xs) + 1;
-
-        xs.splice(i, 0, x);
-        ys.splice(i, 0, y);
-        vs.splice(i, 0, v);
-        N++;
+        addAnchorAt(x);
     }
 }
 
@@ -626,6 +671,8 @@ function saveJsonFile() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+
+    saved = true;
 }
 
 function loadJsonFile() {
@@ -661,4 +708,106 @@ function loadJsonFile() {
     document.body.appendChild(fileInput);
     fileInput.click();
     document.body.removeChild(fileInput);
+}
+
+function saveStorage() {
+    settings = {
+        pauseRestore: $("pause_restore").checked,
+        xSnap: $("x_snap").checked,
+        ySnap: $("y_snap").checked,
+        xGlidDensity: $("x_glid_density").value,
+        yGlidDensity: $("y_glid_density").value,
+    }
+    // 保存するデータ（例として、JavaScriptオブジェクト）
+    const jsonString = JSON.stringify({ N, xs, ys, vs, settings });
+
+    localStorage.setItem("hermite_editor", jsonString);
+}
+
+function loadStorage() {
+    const jsonString = localStorage.getItem("hermite_editor");
+
+    if (!jsonString) return;
+
+    try {
+        const jsonData = JSON.parse(jsonString);
+
+        if (Object.hasOwn(jsonData, "N")) N = jsonData.N;
+        if (Object.hasOwn(jsonData, "xs")) xs = jsonData.xs;
+        if (Object.hasOwn(jsonData, "ys")) ys = jsonData.ys;
+        if (Object.hasOwn(jsonData, "vs")) vs = jsonData.vs;
+
+        if (Object.hasOwn(jsonData, "settings")) {
+            if (Object.hasOwn(jsonData.settings, "pauseRestore")) $("pause_restore").checked = jsonData.settings.pauseRestore;
+            if (Object.hasOwn(jsonData.settings, "xSnap")) $("x_snap").checked = jsonData.settings.xSnap;
+            if (Object.hasOwn(jsonData.settings, "ySnap")) $("y_snap").checked = jsonData.settings.ySnap;
+            if (Object.hasOwn(jsonData.settings, "xGlidDensity")) $("x_glid_density").value = jsonData.settings.xGlidDensity;
+            if (Object.hasOwn(jsonData.settings, "yGlidDensity")) $("y_glid_density").value = jsonData.settings.yGlidDensity;
+        }
+    } catch { }
+}
+
+
+const undoBuffer = [];
+const redoBuffer = [];
+let saved;
+
+function deepcopy(object) {
+    return JSON.parse(JSON.stringify(object));
+}
+
+// 任意の操作ステップの前に一回だけ呼び出す
+function stock() {
+    saved = false;
+    // 状態をundoBufferにストック
+    undoBuffer.push(deepcopy({ N, xs, ys, vs }));
+    // 一定数以上はストックしない
+    while (100 < undoBuffer.length) undoBuffer.shift();
+    // 何か操作したらredoを削除
+    redoBuffer.length = 0;
+
+    console.log("stock", undoBuffer, redoBuffer);
+}
+
+function undo() {
+    const data = undoBuffer.pop();
+    if (!data) return;
+
+    redoBuffer.push(deepcopy({ N, xs, ys, vs }));
+    // 一定数以上はストックしない
+    while (100 < redoBuffer.length) redoBuffer.shift();
+
+    console.log("undo", undoBuffer, redoBuffer);
+    N = data.N;
+    xs = data.xs;
+    ys = data.ys;
+    vs = data.vs;
+
+    setDirectInput();
+}
+
+function redo() {
+    const data = redoBuffer.pop();
+    if (!data) return;
+
+    //undoに移す
+    undoBuffer.push(deepcopy({ N, xs, ys, vs }));
+    // 一定数以上はストックしない
+    while (100 < undoBuffer.length) undoBuffer.shift();
+
+    console.log("redo", undoBuffer, redoBuffer);
+    N = data.N;
+    xs = data.xs;
+    ys = data.ys;
+    vs = data.vs;
+
+    setDirectInput();
+}
+
+window.onbeforeunload = function (e) {
+    saveStorage();
+    if (!saved) {
+        e.preventDefault();
+        return "ブラウザを閉じても良いでしょうか？";
+    }
 }
