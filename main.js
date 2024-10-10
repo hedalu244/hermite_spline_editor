@@ -521,13 +521,13 @@ window.onkeydown = function (e) {
         if ($("y_snap").checked) ys[editing] -= 100 / yGlidDensity();
         setDirectInput();
     }
-    if (e.key == "z" && e.getModifierState("Control")) {
+    if (e.key == "z" && (e.getModifierState("Control") || e.getModifierState("Meta"))) {
         undo();
     }
-    if (e.key == "Z" && e.getModifierState("Control")) {
+    if (e.key == "Z" && (e.getModifierState("Control") || e.getModifierState("Meta"))) {
         redo();
     }
-    if (e.key == "y" && e.getModifierState("Control")) {
+    if (e.key == "y" && (e.getModifierState("Control") || e.getModifierState("Meta"))) {
         redo();
     }
 
