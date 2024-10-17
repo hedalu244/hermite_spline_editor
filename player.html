@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="jp">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player</title>
+</head>
+
+<body>
+    <video src="" id="video"></video>
+    <style>
+        body {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
+        video {
+            width: 100%;
+        }
+    </style>
+    <script>
+        let port;
+        let reader;
+        const textDecoder = new TextDecoderStream();
+        const outputElement = document.getElementById('output');
+
+        document.body.addEventListener('keydown', async (e) => {
+            if (e.key == "o") openVideo();
+            if (e.key == " ") setupSerial();
+        });
+
+        // シリアルポートを要求
+        async function setupSerial() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 500000 }); // Arduino側と一致させる
+
+                const readableStream = port.readable.pipeThrough(textDecoder);
+                reader = readableStream.getReader();
+
+                readSerial();
+            } catch (error) {
+                console.error('Error opening the serial port: ', error);
+            }
+        }
+
+        async function readSerial() {
+            let lineBuffer = '';
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        console.log('Stream closed');
+                        break;
+                    }
+                    lineBuffer += value;
+
+                    // 改行（\n）で区切り、行ごとに処理
+                    const lines = lineBuffer.split('\n');
+                    lineBuffer = lines.pop(); // 最後の部分行を次の読み取りに回す
+
+                    for (const line of lines) {
+                        processLine(line.trim());
+                    }
+                }
+            } catch (error) {
+                console.error('Error reading from the serial port: ', error);
+            }
+        }
+
+        function processLine(line) {
+            // 行ごとの処理を行う（例: 画面に表示）
+            console.log('Received:', line);
+            if (line == "play_start") {
+                playVideo();
+            }
+        }
+
+        function playVideo() {
+            const videoElement = document.getElementById("video");
+            videoElement.currentTime = 0;
+            videoElement.play();
+        }
+
+        function openVideo() {
+            const fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.accept = "video/*";
+
+            fileInput.onchange = () => {
+                const file = fileInput.files[0];
+                if (file) {
+                    const videoElement = document.getElementById("video");
+                    videoElement.src = URL.createObjectURL(file);
+                }
+            };
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            document.body.removeChild(fileInput);
+        }
+    </script>
+</body>
+
+</html>
