@@ -748,6 +748,32 @@ function loadStorage() {
 }
 
 
+function generateCppCode() {
+    let xsString = JSON.stringify(xs);
+    let ysString = JSON.stringify(ys);
+    let vsString = JSON.stringify(vs);
+    xsString = xsString.substring(1, xsString.length - 1);
+    ysString = ysString.substring(1, ysString.length - 1);
+    vsString = vsString.substring(1, vsString.length - 1);
+
+    data = `const int N1 = ${N};
+const PROGMEM float X1[100] = {${xsString}};
+const PROGMEM float Y1[100] = {${ysString}};
+const PROGMEM float V1[100] = {${vsString}};
+`;
+    console.log(data);
+
+    navigator.clipboard.writeText(data).then(
+        () => {
+            alert("成功：クリップボードに出力しました");
+        },
+        () => {
+            alert("失敗：出力に失敗");
+        },
+    );
+}
+
+
 const undoBuffer = [];
 const redoBuffer = [];
 let saved;
